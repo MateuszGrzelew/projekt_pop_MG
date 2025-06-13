@@ -200,6 +200,8 @@ def remove_worker():
         workers.pop(index)
         listbox_pracownikow.delete(index)
 
+
+
 root = Tk()
 root.geometry("1200x760")
 root.title("Projekt MG")
@@ -216,19 +218,19 @@ ramka_mapa.grid(row=2, column=0, columnspan=2)
 
 # Lista klientów
 label_lista_klientow = Label(ramka_lista_obiektow, text="Lista klientów")
-label_lista_klientow.grid(row=3, column=1, columnspan=3)
-listbox_klientow = Listbox(ramka_lista_obiektow, width=50, height=5)
-listbox_klientow.grid(row=4, column=1, columnspan=3)
+label_lista_klientow.grid(row=0, column=7, columnspan=3)
+listbox_klientow = Listbox(ramka_lista_obiektow, width=50, height=10)
+listbox_klientow.grid(row=1, column=7, columnspan=3)
 button_usun_klienta = Button(ramka_lista_obiektow, text="Usuń klienta", command=lambda: remove_client())
-button_usun_klienta.grid(row=5, column=1)
+button_usun_klienta.grid(row=2, column=8)
 
 # Lista pracowników
 label_lista_pracownikow = Label(ramka_lista_obiektow, text="Lista pracowników")
-label_lista_pracownikow.grid(row=6, column=0, columnspan=3)
-listbox_pracownikow = Listbox(ramka_lista_obiektow, width=50, height=5)
-listbox_pracownikow.grid(row=7, column=0, columnspan=3)
+label_lista_pracownikow.grid(row=0, column=11, columnspan=3)
+listbox_pracownikow = Listbox(ramka_lista_obiektow, width=50, height=10)
+listbox_pracownikow.grid(row=1, column=11, columnspan=3)
 button_usun_pracownika = Button(ramka_lista_obiektow, text="Usuń pracownika", command=lambda: remove_worker())
-button_usun_pracownika.grid(row=8, column=0)
+button_usun_pracownika.grid(row=2, column=12)
 
 # === Formularz klientów ===
 label_klienci = Label(ramka_formularz, text="Dodaj klienta")
