@@ -1,11 +1,13 @@
-from tkinter import *
-
+import tkinter as tk
+from tkinter import ttk, messagebox
+from PIL import Image, ImageTk
 import tkintermapview
+import requests
+from bs4 import BeautifulSoup
 
-teatry: list = []
-clients: list = []
-workers: list = []
-
+teatry = []
+clients = []
+workers = []
 
 class Teatr:
     def __init__(self, teatry_name, teatry_location):
@@ -19,8 +21,6 @@ class Teatr:
             self.marker = None
 
     def get_coordinates(self):
-        import requests
-        from bs4 import BeautifulSoup
         try:
             url = f"https://pl.wikipedia.org/wiki/{self.location}"
             response = requests.get(url).text
@@ -44,22 +44,28 @@ class Client:
         self.location = location
         self.theater = theater
         self.coordinates = self.get_coordinates()
-        self.marker = map_widget.set_marker(self.coordinates[0], self.coordinates[1], text=f'Klient: {self.name}')
         if self.coordinates:
             self.marker = map_widget.set_marker(self.coordinates[0], self.coordinates[1], text=f'Klient: {self.name}')
         else:
             self.marker = None
 
     def get_coordinates(self):
-        import requests
-        from bs4 import BeautifulSoup
-        url = f"https://pl.wikipedia.org/wiki/{self.location}"
-        response = requests.get(url).text
-        soup = BeautifulSoup(response, "html.parser")
-        lon = float(soup.select(".longitude")[1].text.replace(",", "."))
-        lat = float(soup.select(".latitude")[1].text.replace(",", "."))
-        return [lat, lon]
-
+        try:
+            url = f"https://pl.wikipedia.org/wiki/{self.location}"
+            response = requests.get(url).text
+            soup = BeautifulSoup(response, "html.parser")
+            lon_elements = soup.select(".longitude")
+            lat_elements = soup.select(".latitude")
+            if not lon_elements or not lat_elements:
+                raise ValueError("Brak współrzędnych w artykule.")
+            lon = float(lon_elements[1].text.replace(",", ".")) if len(lon_elements) > 1 else float(
+                lon_elements[0].text.replace(",", "."))
+            lat = float(lat_elements[1].text.replace(",", ".")) if len(lat_elements) > 1 else float(
+                lat_elements[0].text.replace(",", "."))
+            return [lat, lon]
+        except Exception as e:
+            print(f"Błąd przy pobieraniu współrzędnych dla klienta {self.location}: {e}")
+            return None
 
 class Worker:
     def __init__(self, name, location, theater):
@@ -67,263 +73,292 @@ class Worker:
         self.location = location
         self.theater = theater
         self.coordinates = self.get_coordinates()
-        self.marker = map_widget.set_marker(self.coordinates[0], self.coordinates[1], text=f'Pracownik: {self.name}')
         if self.coordinates:
             self.marker = map_widget.set_marker(self.coordinates[0], self.coordinates[1], text=f'Pracownik: {self.name}')
         else:
             self.marker = None
 
     def get_coordinates(self):
-        import requests
-        from bs4 import BeautifulSoup
-        url = f"https://pl.wikipedia.org/wiki/{self.location}"
-        response = requests.get(url).text
-        soup = BeautifulSoup(response, "html.parser")
-        lon = float(soup.select(".longitude")[1].text.replace(",", "."))
-        lat = float(soup.select(".latitude")[1].text.replace(",", "."))
-        return [lat, lon]
+        try:
+            url = f"https://pl.wikipedia.org/wiki/{self.location}"
+            response = requests.get(url).text
+            soup = BeautifulSoup(response, "html.parser")
+            lon_elements = soup.select(".longitude")
+            lat_elements = soup.select(".latitude")
+            if not lon_elements or not lat_elements:
+                raise ValueError("Brak współrzędnych w artykule.")
+            lon = float(lon_elements[1].text.replace(",", ".")) if len(lon_elements) > 1 else float(
+                lon_elements[0].text.replace(",", "."))
+            lat = float(lat_elements[1].text.replace(",", ".")) if len(lat_elements) > 1 else float(
+                lat_elements[0].text.replace(",", "."))
+            return [lat, lon]
+        except Exception as e:
+            print(f"Błąd przy pobieraniu współrzędnych dla pracownika {self.location}: {e}")
+            return None
 
+def dodaj_teatr():
+    nazwa = theater_name_entry.get()
+    adres = theater_address_entry.get()
 
-def add_teatry():
-    zmienna_nazwa = entry_teatry_name.get()
-    zmienna_miejscowosc = entry_location.get()
-    nowy_teatr = Teatr(zmienna_nazwa, zmienna_miejscowosc)
-    teatry.append(nowy_teatr)
-    entry_teatry_name.delete(0, END)
-    entry_location.delete(0, END)
-    entry_teatry_name.focus()
-    show_teatry()
+    if not nazwa or not adres:
+        messagebox.showwarning("Brak danych", "Wprowadź nazwę i adres teatru.")
+        return
 
+    teatr = Teatr(nazwa, adres)
+    if teatr.coordinates is None:
+        messagebox.showerror("Błąd", f"Nie udało się znaleźć współrzędnych dla adresu: {adres}")
+        return
 
+    teatry.append(teatr)
+    listbox_theater.insert(tk.END, f'{nazwa} ({adres})')
+    theater_name_entry.delete(0, tk.END)
+    theater_address_entry.delete(0, tk.END)
+    messagebox.showinfo("Sukces", f"Dodano teatr: {nazwa}")
 
-
-def show_teatry():
-    listbox_lista_obiketow.delete(0, END)
-    for idx, teatr in enumerate(teatry):
-        listbox_lista_obiketow.insert(idx, f'{idx + 1}. {teatr.teatry_name}')
-
-
-def remove_teatry():
-    i = listbox_lista_obiketow.index(ACTIVE)
-    teatry[i].marker.delete()
-    teatry.pop(i)
-    show_teatry()
-
-
-def edit_teatry():
-    i = listbox_lista_obiketow.index(ACTIVE)
-    teatry_name = teatry[i].teatry_name
-
-    location = teatry[i].location
-
-    entry_teatry_name.insert(0, teatry_name)
-    entry_location.insert(0, location)
-
-    button_dodaj_obiekt.config(text='zapisz', command=lambda: update_teatry(i))
-
-
-def update_teatry(i):
-    new_teatry_name = entry_teatry_name.get()
-    new_location = entry_location.get()
-
-
-    teatry[i].teatry_name = new_teatry_name
-
-    teatry[i].location = new_location
-
-
-    teatry[i].marker.delete()
-    teatry[i].coordinates = teatry[i].get_coordinates()
-    if teatry[i].coordinates:
-        teatry[i].marker = map_widget.set_marker(teatry[i].coordinates[0], teatry[i].coordinates[1])
-    else:
-        teatry[i].marker = None
-
-    entry_teatry_name.delete(0, END)
-    entry_location.delete(0, END)
-
-    entry_teatry_name.focus()
-
-    button_dodaj_obiekt.config(text='Dodaj obiekt', command=add_teatry)
-    show_teatry()
-
-
-def show_teatry_details():
-    i = listbox_lista_obiketow.index(ACTIVE)
-    teatry_name = teatry[i].teatry_name
-    location = teatry[i].location
-    label_szczegoly_teatry_name_wartosc.config(text=teatry_name)
-    label_szczegoly_location_wartosc.config(text=location)
-
-    map_widget.set_position(teatry[i].coordinates[0], teatry[i].coordinates[1])
-    map_widget.set_zoom(17)
 
 def add_client():
-    name = entry_klient_name.get()
-    location = entry_klient_location.get()
-    index = int(entry_klient_teatr.get()) - 1
-    listbox_pracownikow.insert(END, f'{name} ({location})')
+    name = client_name_entry.get()
+    location = client_location_entry.get()
+    try:
+        index = int(client_theater_entry.get()) - 1
+    except ValueError:
+        messagebox.showwarning("Błąd", "Podaj prawidłowy numer teatru.")
+        return
+
+    if not name or not location:
+        messagebox.showwarning("Brak danych", "Wprowadź imię i lokalizację klienta.")
+        return
+
     if 0 <= index < len(teatry):
         klient = Client(name, location, teatry[index])
+        if klient.coordinates is None:
+            messagebox.showerror("Błąd", f"Nie udało się pobrać współrzędnych dla klienta {location}.")
+            return
         clients.append(klient)
-        entry_klient_name.delete(0, END)
-        entry_klient_location.delete(0, END)
-        entry_klient_teatr.delete(0, END)
-
+        listbox_klientow.insert(tk.END, f'{name} ({location})')
+        client_name_entry.delete(0, tk.END)
+        client_location_entry.delete(0, tk.END)
+        client_theater_entry.delete(0, tk.END)
+    else:
+        messagebox.showwarning("Błąd", "Podaj prawidłowy numer teatru.")
 
 def add_worker():
-    name = entry_pracownik_name.get()
-    location = entry_pracownik_location.get()
-    index = int(entry_pracownik_teatr.get()) - 1
-    listbox_pracownikow.insert(END, f'{name} ({location})')
+    name = staff_name_entry.get()
+    location = staff_location_entry.get()
+    try:
+        index = int(staff_theater_entry.get()) - 1
+    except ValueError:
+        messagebox.showwarning("Błąd", "Podaj prawidłowy numer teatru.")
+        return
+
+    if not name or not location:
+        messagebox.showwarning("Brak danych", "Wprowadź imię i lokalizację pracownika.")
+        return
 
     if 0 <= index < len(teatry):
         pracownik = Worker(name, location, teatry[index])
+        if pracownik.coordinates is None:
+            messagebox.showerror("Błąd", f"Nie udało się pobrać współrzędnych dla pracownika {location}.")
+            return
         workers.append(pracownik)
-        entry_pracownik_name.delete(0, END)
-        entry_pracownik_location.delete(0, END)
-        entry_pracownik_teatr.delete(0, END)
+        listbox_pracownikow.insert(tk.END, f'{name} ({location})')
+        staff_name_entry.delete(0, tk.END)
+        staff_location_entry.delete(0, tk.END)
+        staff_theater_entry.delete(0, tk.END)
+    else:
+        messagebox.showwarning("Błąd", "Podaj prawidłowy numer teatru.")
 
 def remove_client():
-    i = listbox_klientow.curselection()
-    if i:
-        index = i[0]
-        clients[index].marker.delete()
+    selection = listbox_klientow.curselection()
+    if selection:
+        index = selection[0]
+        if clients[index].marker:
+            clients[index].marker.delete()
         clients.pop(index)
         listbox_klientow.delete(index)
 
 def remove_worker():
-    i = listbox_pracownikow.curselection()
-    if i:
-        index = i[0]
-        workers[index].marker.delete()
+    selection = listbox_pracownikow.curselection()
+    if selection:
+        index = selection[0]
+        if workers[index].marker:
+            workers[index].marker.delete()
         workers.pop(index)
         listbox_pracownikow.delete(index)
 
+def remove_teatry():
+    selection = listbox_theater.curselection()
+    if selection:
+        index = selection[0]
+        teatr = teatry[index]
 
+        # Usuń marker teatru z mapy
+        if teatr.marker:
+            teatr.marker.delete()
 
-root = Tk()
-root.geometry("1200x760")
-root.title("Projekt MG")
+        # Usuń klientów związanych z teatrem
+        global clients
+        new_clients = []
+        listbox_klientow.delete(0, tk.END)
+        for klient in clients:
+            if klient.theater != teatr:
+                new_clients.append(klient)
+                listbox_klientow.insert(tk.END, f'{klient.name} ({klient.location})')
+            else:
+                if klient.marker:
+                    klient.marker.delete()
+        clients = new_clients
 
-ramka_lista_obiektow = Frame(root)
-ramka_formularz = Frame(root)
-ramka_szczegoly_obiektow = Frame(root)
-ramka_mapa = Frame(root)
+        # Usuń pracowników związanych z teatrem
+        global workers
+        new_workers = []
+        listbox_pracownikow.delete(0, tk.END)
+        for pracownik in workers:
+            if pracownik.theater != teatr:
+                new_workers.append(pracownik)
+                listbox_pracownikow.insert(tk.END, f'{pracownik.name} ({pracownik.location})')
+            else:
+                if pracownik.marker:
+                    pracownik.marker.delete()
+        workers = new_workers
 
-ramka_lista_obiektow.grid(row=0, column=0)
-ramka_formularz.grid(row=0, column=1)
-ramka_szczegoly_obiektow.grid(row=1, column=0, columnspan=2)
-ramka_mapa.grid(row=2, column=0, columnspan=2)
+        teatry.pop(index)
+        listbox_theater.delete(index)
 
-# Lista klientów
-label_lista_klientow = Label(ramka_lista_obiektow, text="Lista klientów")
-label_lista_klientow.grid(row=0, column=7, columnspan=3)
-listbox_klientow = Listbox(ramka_lista_obiektow, width=50, height=10)
-listbox_klientow.grid(row=1, column=7, columnspan=3)
-button_usun_klienta = Button(ramka_lista_obiektow, text="Usuń klienta", command=lambda: remove_client())
-button_usun_klienta.grid(row=2, column=8)
+root = tk.Tk()
+root.title("Mapa Teatralna")
+root.geometry("1000x600")
+root.minsize(800, 500)
 
-# Lista pracowników
-label_lista_pracownikow = Label(ramka_lista_obiektow, text="Lista pracowników")
-label_lista_pracownikow.grid(row=0, column=11, columnspan=3)
-listbox_pracownikow = Listbox(ramka_lista_obiektow, width=50, height=10)
-listbox_pracownikow.grid(row=1, column=11, columnspan=3)
-button_usun_pracownika = Button(ramka_lista_obiektow, text="Usuń pracownika", command=lambda: remove_worker())
-button_usun_pracownika.grid(row=2, column=12)
+# Wczytaj i przeskaluj ikony (upewnij się, że pliki są w tym samym katalogu co skrypt)
+try:
+    add_image = Image.open("add_icon.png").resize((24, 24), Image.LANCZOS)
+    remove_image = Image.open("remove_icon.png").resize((24, 24), Image.LANCZOS)
+    add_icon = ImageTk.PhotoImage(add_image)
+    remove_icon = ImageTk.PhotoImage(remove_image)
+except Exception as e:
+    print("Nie znaleziono ikon add_icon.png lub remove_icon.png. Użyję przycisków tekstowych.")
+    add_icon = None
+    remove_icon = None
 
-# === Formularz klientów ===
-label_klienci = Label(ramka_formularz, text="Dodaj klienta")
-label_klienci.grid(row=6, column=0, columnspan=2)
+root.grid_columnconfigure(1, weight=1)
+root.grid_rowconfigure(0, weight=1)
 
-label_klient_name = Label(ramka_formularz, text="Imię klienta:")
-label_klient_name.grid(row=7, column=0)
-entry_klient_name = Entry(ramka_formularz)
-entry_klient_name.grid(row=7, column=1)
+# Lewy panel (formularze + lista)
+left_frame = ttk.Frame(root, padding=10)
+left_frame.grid(row=0, column=0, sticky="ns")
+left_frame.grid_rowconfigure(3, weight=1)
 
-label_klient_location = Label(ramka_formularz, text="Miejscowość:")
-label_klient_location.grid(row=8, column=0)
-entry_klient_location = Entry(ramka_formularz)
-entry_klient_location.grid(row=8, column=1)
+# Prawy panel (mapa + szczegóły)
+right_frame = ttk.Frame(root, padding=10)
+right_frame.grid(row=0, column=1, sticky="nsew")
+right_frame.grid_rowconfigure(0, weight=1)
+right_frame.grid_columnconfigure(0, weight=1)
 
-label_klient_teatr = Label(ramka_formularz, text="Nr teatru:")
-label_klient_teatr.grid(row=9, column=0)
-entry_klient_teatr = Entry(ramka_formularz)
-entry_klient_teatr.grid(row=9, column=1)
-
-button_dodaj_klienta = Button(ramka_formularz, text="Dodaj klienta", command=lambda: add_client())
-button_dodaj_klienta.grid(row=10, column=0, columnspan=2)
-
-
-# === Formularz pracowników ===
-label_pracownicy = Label(ramka_formularz, text="Dodaj pracownika")
-label_pracownicy.grid(row=11, column=0, columnspan=2)
-
-label_pracownik_name = Label(ramka_formularz, text="Imię pracownika:")
-label_pracownik_name.grid(row=12, column=0)
-entry_pracownik_name = Entry(ramka_formularz)
-entry_pracownik_name.grid(row=12, column=1)
-
-label_pracownik_location = Label(ramka_formularz, text="Miejscowość:")
-label_pracownik_location.grid(row=13, column=0)
-entry_pracownik_location = Entry(ramka_formularz)
-entry_pracownik_location.grid(row=13, column=1)
-
-label_pracownik_teatr = Label(ramka_formularz, text="Nr teatru:")
-label_pracownik_teatr.grid(row=14, column=0)
-entry_pracownik_teatr = Entry(ramka_formularz)
-entry_pracownik_teatr.grid(row=14, column=1)
-
-button_dodaj_pracownika = Button(ramka_formularz, text="Dodaj pracownika", command=lambda: add_worker())
-button_dodaj_pracownika.grid(row=15, column=0, columnspan=2)
-
-# ramka_lista_obiektow
-label_lista_obiektow = Label(ramka_lista_obiektow, text="Lista użytkowników")
-label_lista_obiektow.grid(row=0, column=0, columnspan=3)
-listbox_lista_obiketow = Listbox(ramka_lista_obiektow, width=50, height=10)
-listbox_lista_obiketow.grid(row=1, column=0, columnspan=3)
-button_pokaz_szczegoly_obiektu = Button(ramka_lista_obiektow, text='Pokaż szczegóły', command=show_teatry_details)
-button_pokaz_szczegoly_obiektu.grid(row=2, column=0)
-button_usun_obiekt = Button(ramka_lista_obiektow, text='Usuń obiekt', command=remove_teatry)
-button_usun_obiekt.grid(row=2, column=1)
-button_edytuj_obiekt = Button(ramka_lista_obiektow, text='Edytuj obiekt', command=edit_teatry)
-button_edytuj_obiekt.grid(row=2, column=2)
-
-# ramka_formularz
-label_formularz = Label(ramka_formularz, text="Formularz")
-label_formularz.grid(row=0, column=0, columnspan=2)
-label_teatry_name = Label(ramka_formularz, text="Nazwa Teatru:")
-label_teatry_name.grid(row=1, column=0, sticky=W)
-label_location = Label(ramka_formularz, text="Miejscowość:")
-label_location.grid(row=2, column=0, sticky=W)
-
-
-entry_teatry_name = Entry(ramka_formularz)
-entry_teatry_name.grid(row=1, column=1)
-entry_location = Entry(ramka_formularz)
-entry_location.grid(row=2, column=1)
-
-button_dodaj_obiekt = Button(ramka_formularz, text='Dodaj obiekt', command=add_teatry)
-button_dodaj_obiekt.grid(row=5, column=0, columnspan=2)
-
-# ramka_szczegoly_obiektow
-label_szczegoly_obiektow = Label(ramka_szczegoly_obiektow, text="Szczegoly obiektu:")
-label_szczegoly_obiektow.grid(row=0, column=0)
-label_szczegoly_teatry_name = Label(ramka_szczegoly_obiektow, text="Nazwa Teatru:")
-label_szczegoly_teatry_name.grid(row=1, column=0)
-label_szczegoly_teatry_name_wartosc = Label(ramka_szczegoly_obiektow, text="....")
-label_szczegoly_teatry_name_wartosc.grid(row=1, column=1)
-label_szczegoly_location = Label(ramka_szczegoly_obiektow, text="Miejscowość:")
-label_szczegoly_location.grid(row=1, column=4)
-label_szczegoly_location_wartosc = Label(ramka_szczegoly_obiektow, text="....")
-label_szczegoly_location_wartosc.grid(row=1, column=5)
-label_szczegoly__wartosc = Label(ramka_szczegoly_obiektow, text="....")
-label_szczegoly__wartosc.grid(row=1, column=7)
-
-# ramka_mapa
-map_widget = tkintermapview.TkinterMapView(ramka_mapa, width=1200, height=500, corner_radius=5)
-map_widget.grid(row=0, column=0, columnspan=2)
-map_widget.set_position(52.23, 21.0)
+map_widget = tkintermapview.TkinterMapView(right_frame, corner_radius=0)
+map_widget.grid(row=0, column=0, sticky="nsew")
+map_widget.set_position(52.2297, 21.0122)
 map_widget.set_zoom(6)
+
+# Ramka na szczegóły obiektu
+info_frame = ttk.Frame(right_frame)
+info_frame.grid(row=1, column=0, sticky="ew", pady=10)
+info_frame.columnconfigure(1, weight=1)
+
+info_label = ttk.Label(info_frame, text="Szczegóły:", font=("Arial", 12, "bold"))
+info_label.grid(row=0, column=0, columnspan=2, sticky="w")
+
+info_name = ttk.Label(info_frame, text="Nazwa:")
+info_name.grid(row=1, column=0, sticky="e")
+info_name_value = ttk.Label(info_frame, text="")
+info_name_value.grid(row=1, column=1, sticky="w")
+
+info_address = ttk.Label(info_frame, text="Adres:")
+info_address.grid(row=2, column=0, sticky="e")
+info_address_value = ttk.Label(info_frame, text="")
+info_address_value.grid(row=2, column=1, sticky="w")
+
+# Klienci
+client_frame = ttk.LabelFrame(left_frame, text="Klienci", padding=10)
+client_frame.grid(row=0, column=0, sticky="ew", pady=5)
+
+client_name_label = ttk.Label(client_frame, text="Imię i nazwisko klienta:")
+client_name_label.grid(row=0, column=0, sticky="w")
+client_name_entry = ttk.Entry(client_frame)
+client_name_entry.grid(row=0, column=1, sticky="ew")
+
+client_location_label = ttk.Label(client_frame, text="Lokalizacja klienta:")
+client_location_label.grid(row=1, column=0, sticky="w")
+client_location_entry = ttk.Entry(client_frame)
+client_location_entry.grid(row=1, column=1, sticky="ew")
+
+client_theater_label = ttk.Label(client_frame, text="Nr teatru:")
+client_theater_label.grid(row=2, column=0, sticky="w")
+client_theater_entry = ttk.Entry(client_frame)
+client_theater_entry.grid(row=2, column=1, sticky="ew")
+
+add_client_btn = ttk.Button(client_frame, image=add_icon, text="Dodaj" if add_icon is None else "", compound="left", command=add_client)
+add_client_btn.grid(row=3, column=0, pady=5)
+
+remove_client_btn = ttk.Button(client_frame, image=remove_icon, text="Usuń" if remove_icon is None else "", compound="left", command=remove_client)
+remove_client_btn.grid(row=3, column=1, pady=5)
+
+listbox_klientow = tk.Listbox(client_frame, height=6)
+listbox_klientow.grid(row=4, column=0, columnspan=2, sticky="ew", pady=5)
+
+# Pracownicy
+staff_frame = ttk.LabelFrame(left_frame, text="Pracownicy", padding=10)
+staff_frame.grid(row=1, column=0, sticky="ew", pady=5)
+
+staff_name_label = ttk.Label(staff_frame, text="Imię i nazwisko pracownika:")
+staff_name_label.grid(row=0, column=0, sticky="w")
+staff_name_entry = ttk.Entry(staff_frame)
+staff_name_entry.grid(row=0, column=1, sticky="ew")
+
+staff_location_label = ttk.Label(staff_frame, text="Lokalizacja pracownika:")
+staff_location_label.grid(row=1, column=0, sticky="w")
+staff_location_entry = ttk.Entry(staff_frame)
+staff_location_entry.grid(row=1, column=1, sticky="ew")
+
+staff_theater_label = ttk.Label(staff_frame, text="Nr teatru:")
+staff_theater_label.grid(row=2, column=0, sticky="w")
+staff_theater_entry = ttk.Entry(staff_frame)
+staff_theater_entry.grid(row=2, column=1, sticky="ew")
+
+add_staff_btn = ttk.Button(staff_frame, image=add_icon, text="Dodaj" if add_icon is None else "", compound="left", command=add_worker)
+add_staff_btn.grid(row=3, column=0, pady=5)
+
+remove_staff_btn = ttk.Button(staff_frame, image=remove_icon, text="Usuń" if remove_icon is None else "", compound="left", command=remove_worker)
+remove_staff_btn.grid(row=3, column=1, pady=5)
+
+listbox_pracownikow = tk.Listbox(staff_frame, height=6)
+listbox_pracownikow.grid(row=4, column=0, columnspan=2, sticky="ew", pady=5)
+
+# Teatry
+theater_frame = ttk.LabelFrame(left_frame, text="Teatry", padding=10)
+theater_frame.grid(row=2, column=0, sticky="ew", pady=5)
+
+theater_name_label = ttk.Label(theater_frame, text="Nazwa teatru:")
+theater_name_label.grid(row=0, column=0, sticky="w")
+theater_name_entry = ttk.Entry(theater_frame)
+theater_name_entry.grid(row=0, column=1, sticky="ew")
+
+theater_address_label = ttk.Label(theater_frame, text="Adres teatru (nazwa Wikipedii):")
+theater_address_label.grid(row=1, column=0, sticky="w")
+theater_address_entry = ttk.Entry(theater_frame)
+theater_address_entry.grid(row=1, column=1, sticky="ew")
+
+add_theater_btn = ttk.Button(theater_frame, image=add_icon, text="Dodaj" if add_icon is None else "", compound="left", command=dodaj_teatr)
+add_theater_btn.grid(row=2, column=0, pady=5)
+
+remove_theater_btn = ttk.Button(theater_frame, image=remove_icon, text="Usuń" if remove_icon is None else "", compound="left", command=remove_teatry)
+remove_theater_btn.grid(row=2, column=1, pady=5)
+
+listbox_theater = tk.Listbox(theater_frame, height=6)
+listbox_theater.grid(row=4, column=0, columnspan=2, sticky="ew", pady=5)
+
+# Zapewnij rozciąganie kolumn wejść
+for frame in (client_frame, staff_frame, theater_frame):
+    frame.grid_columnconfigure(1, weight=1)
 
 root.mainloop()
