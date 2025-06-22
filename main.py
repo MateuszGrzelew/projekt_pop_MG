@@ -10,10 +10,11 @@ clients = []
 workers = []
 
 class Teatr:
-    def __init__(self, teatry_name, teatry_location):
+    def __init__(self, teatry_name, teatry_location, map_widget):
         self.teatry_name = teatry_name
         self.location = teatry_location
         self.coordinates = self.get_coordinates()
+        self.marker = None
         if self.coordinates:
             self.marker = map_widget.set_marker(self.coordinates[0], self.coordinates[1],
                                                 text=f'Teatry: {self.teatry_name}')
@@ -39,11 +40,12 @@ class Teatr:
             return None
 
 class Client:
-    def __init__(self, name, location, theater):
+    def __init__(self, name, location, theater, map_widget):
         self.name = name
         self.location = location
         self.theater = theater
         self.coordinates = self.get_coordinates()
+        self.marker = None
         if self.coordinates:
             self.marker = map_widget.set_marker(self.coordinates[0], self.coordinates[1], text=f'Klient: {self.name}')
         else:
@@ -68,13 +70,16 @@ class Client:
             return None
 
 class Worker:
-    def __init__(self, name, location, theater):
+    def __init__(self, name, location, theater, specialization, map_widget):
         self.name = name
         self.location = location
+        self.specialization = specialization
         self.theater = theater
         self.coordinates = self.get_coordinates()
+        self.marker = None
         if self.coordinates:
-            self.marker = map_widget.set_marker(self.coordinates[0], self.coordinates[1], text=f'Pracownik: {self.name}')
+            text = f'Pracownik: {self.name}\nSpecjalizacja: {self.specialization}'
+            self.marker = map_widget.set_marker(self.coordinates[0], self.coordinates[1], text=text)
         else:
             self.marker = None
 
@@ -96,9 +101,14 @@ class Worker:
             print(f"Błąd przy pobieraniu współrzędnych dla pracownika {self.location}: {e}")
             return None
 
-def dodaj_teatr():
+clients_visible = True
+workers_visible = True
+theaters_visible = True
+
+def dodaj_teatr(name, location):
     nazwa = theater_name_entry.get()
     adres = theater_address_entry.get()
+    theater = Teatr(name, location, map_widget)
 
     if not nazwa or not adres:
         messagebox.showwarning("Brak danych", "Wprowadź nazwę i adres teatru.")
@@ -116,7 +126,7 @@ def dodaj_teatr():
     messagebox.showinfo("Sukces", f"Dodano teatr: {nazwa}")
 
 
-def add_client():
+def add_client(name, location, theater_name):
     name = client_name_entry.get()
     location = client_location_entry.get()
     try:
@@ -130,7 +140,7 @@ def add_client():
         return
 
     if 0 <= index < len(teatry):
-        klient = Client(name, location, teatry[index])
+        klient = Client(name, location, map_widget)
         if klient.coordinates is None:
             messagebox.showerror("Błąd", f"Nie udało się pobrać współrzędnych dla klienta {location}.")
             return
@@ -142,9 +152,13 @@ def add_client():
     else:
         messagebox.showwarning("Błąd", "Podaj prawidłowy numer teatru.")
 
-def add_worker():
+def add_worker(name, location, specialization, theater_name):
     name = staff_name_entry.get()
     location = staff_location_entry.get()
+    specialization = staff_specialization_entry.get()
+    if not specialization:
+        messagebox.showwarning("Brak danych", "Wybierz specjalizację pracownika.")
+        return
     try:
         index = int(staff_theater_entry.get()) - 1
     except ValueError:
@@ -156,7 +170,7 @@ def add_worker():
         return
 
     if 0 <= index < len(teatry):
-        pracownik = Worker(name, location, teatry[index])
+        pracownik = Worker(name, location, teatry, specialization, map_widget)
         if pracownik.coordinates is None:
             messagebox.showerror("Błąd", f"Nie udało się pobrać współrzędnych dla pracownika {location}.")
             return
@@ -225,6 +239,71 @@ def remove_teatry():
         teatry.pop(index)
         listbox_theater.delete(index)
 
+#Widoczność znaczników
+def toggle_clients():
+    global clients_visible
+    clients_visible = not clients_visible
+    for client in clients:
+        if client.marker:
+            if clients_visible:
+                client.marker.set_visible(True)
+            else:
+                client.marker.set_visible(False)
+
+def toggle_workers():
+    global workers_visible
+    workers_visible = not workers_visible
+    for worker in workers:
+        if worker.marker:
+            if workers_visible:
+                worker.marker.set_visible(True)
+            else:
+                worker.marker.set_visible(False)
+
+def toggle_theaters():
+    global theaters_visible
+    theaters_visible = not theaters_visible
+    for teatr in teatry:
+        if teatr.marker:
+            if theaters_visible:
+                teatr.marker.set_visible(True)
+            else:
+                teatr.marker.set_visible(False)
+
+#Pokazanie powiązanych
+
+def show_associated():
+    selection = listbox_theater.curselection()
+    if not selection:
+        messagebox.showinfo("Info", "Zaznacz teatr z listy.")
+        return
+
+    index = selection[0]
+    teatr = teatry[index]
+
+    # Ukryj wszystkich
+    for client in clients:
+        if client.marker:
+            client.marker.set_visible(False)
+    for worker in workers:
+        if worker.marker:
+            worker.marker.set_visible(False)
+    for t in teatry:
+        if t.marker:
+            t.marker.set_visible(False)
+
+    # Pokaż wybrany teatr
+    if teatr.marker:
+        teatr.marker.set_visible(True)
+
+    # Pokaż powiązanych klientów i pracowników
+    for client in clients:
+        if client.theater == teatr and client.marker:
+            client.marker.set_visible(True)
+    for worker in workers:
+        if worker.theater == teatr and worker.marker:
+            worker.marker.set_visible(True)
+
 root = tk.Tk()
 root.title("Mapa Teatralna")
 root.geometry("1000x600")
@@ -280,7 +359,7 @@ info_address_value.grid(row=2, column=1, sticky="w")
 
 # Klienci
 client_frame = ttk.LabelFrame(left_frame, text="Klienci", padding=10)
-client_frame.grid(row=0, column=0, sticky="ew", pady=5)
+client_frame.grid(row=0, column=0, sticky="ew", pady=2)
 
 client_name_label = ttk.Label(client_frame, text="Imię i nazwisko klienta:")
 client_name_label.grid(row=0, column=0, sticky="w")
@@ -303,7 +382,7 @@ add_client_btn.grid(row=3, column=0, pady=5)
 remove_client_btn = ttk.Button(client_frame, image=remove_icon, text="Usuń" if remove_icon is None else "", compound="left", command=remove_client)
 remove_client_btn.grid(row=3, column=1, pady=5)
 
-listbox_klientow = tk.Listbox(client_frame, height=6)
+listbox_klientow = tk.Listbox(client_frame, height=4)
 listbox_klientow.grid(row=4, column=0, columnspan=2, sticky="ew", pady=5)
 
 # Pracownicy
@@ -326,13 +405,21 @@ staff_theater_entry = ttk.Entry(staff_frame)
 staff_theater_entry.grid(row=2, column=1, sticky="ew")
 
 add_staff_btn = ttk.Button(staff_frame, image=add_icon, text="Dodaj" if add_icon is None else "", compound="left", command=add_worker)
-add_staff_btn.grid(row=3, column=0, pady=5)
+add_staff_btn.grid(row=4, column=0, pady=5)
 
 remove_staff_btn = ttk.Button(staff_frame, image=remove_icon, text="Usuń" if remove_icon is None else "", compound="left", command=remove_worker)
-remove_staff_btn.grid(row=3, column=1, pady=5)
+remove_staff_btn.grid(row=4, column=1, pady=5)
 
-listbox_pracownikow = tk.Listbox(staff_frame, height=6)
-listbox_pracownikow.grid(row=4, column=0, columnspan=2, sticky="ew", pady=5)
+listbox_pracownikow = tk.Listbox(staff_frame, height=4)
+listbox_pracownikow.grid(row=5, column=0, columnspan=2, sticky="ew", pady=5)
+
+staff_specialization_label = ttk.Label(staff_frame, text="Specjalizacja:")
+staff_specialization_label.grid(row=3, column=0, sticky="w")
+
+staff_specialization_entry = ttk.Combobox(
+    staff_frame, values=["Reżyser", "Właściciel", "Aktor", "Technik"], state="readonly"
+)
+staff_specialization_entry.grid(row=3, column=1, sticky="ew")
 
 # Teatry
 theater_frame = ttk.LabelFrame(left_frame, text="Teatry", padding=10)
@@ -354,11 +441,87 @@ add_theater_btn.grid(row=2, column=0, pady=5)
 remove_theater_btn = ttk.Button(theater_frame, image=remove_icon, text="Usuń" if remove_icon is None else "", compound="left", command=remove_teatry)
 remove_theater_btn.grid(row=2, column=1, pady=5)
 
-listbox_theater = tk.Listbox(theater_frame, height=6)
+listbox_theater = tk.Listbox(theater_frame, height=4)
 listbox_theater.grid(row=4, column=0, columnspan=2, sticky="ew", pady=5)
+
+
+#Przyciski do pokazywania i chowania
+
+toggle_frame = ttk.Frame(theater_frame)
+toggle_frame.grid(row=5, column=0, columnspan=2, pady=10)
+
+btn_clients = ttk.Button(toggle_frame, text="Klienci", command=toggle_clients)
+btn_clients.grid(row=0, column=0, padx=5)
+
+btn_workers = ttk.Button(toggle_frame, text="Pracownicy", command=toggle_workers)
+btn_workers.grid(row=0, column=1, padx=5)
+
+btn_theaters = ttk.Button(toggle_frame, text="Teatry", command=toggle_theaters)
+btn_theaters.grid(row=0, column=2, padx=5)
+
+btn_show_associated = ttk.Button(toggle_frame, text="Pokaż powiązanych", command=show_associated)
+btn_show_associated.grid(row=0, column=3, padx=5)
 
 # Zapewnij rozciąganie kolumn wejść
 for frame in (client_frame, staff_frame, theater_frame):
     frame.grid_columnconfigure(1, weight=1)
+
+    # Dodawanie teatrów
+    dodaj_teatr("Teatr Narodowy", "Warszawa")
+    dodaj_teatr("Teatr Bagatela", "Kraków")
+    dodaj_teatr("Teatr Nowy", "Poznań")
+    dodaj_teatr("Teatr Muzyczny", "Gdynia")
+
+    # Pracownicy Teatr Narodowy
+    add_worker("Jan Kowalski", "Legionowo", "Reżyser", "Teatr Narodowy")
+    add_worker("Anna Nowak", "Piaseczno", "Właściciel", "Teatr Narodowy")
+    add_worker("Marek Zieliński", "Otwock", "Technik", "Teatr Narodowy")
+    add_worker("Ewa Kamińska", "Ząbki", "Aktor", "Teatr Narodowy")
+    add_worker("Piotr Lewandowski", "Marki", "Aktor", "Teatr Narodowy")
+
+    # Klienci Teatr Narodowy
+    add_client("Katarzyna Wójcik", "Mińsk Mazowiecki", "Teatr Narodowy")
+    add_client("Tomasz Mazur", "Grodzisk Mazowiecki", "Teatr Narodowy")
+    add_client("Agnieszka Kwiatkowska", "Wołomin", "Teatr Narodowy")
+    add_client("Robert Nowicki", "Pruszków", "Teatr Narodowy")
+
+    # Pracownicy Teatr Bagatela
+    add_worker("Aleksandra Dąbrowska", "Wieliczka", "Reżyser", "Teatr Bagatela")
+    add_worker("Tadeusz Szymański", "Skawina", "Właściciel", "Teatr Bagatela")
+    add_worker("Natalia Król", "Bochnia", "Technik", "Teatr Bagatela")
+    add_worker("Łukasz Pawlak", "Myślenice", "Aktor", "Teatr Bagatela")
+    add_worker("Magdalena Czerwińska", "Niepołomice", "Aktor", "Teatr Bagatela")
+
+    # Klienci Teatr Bagatela
+    add_client("Kamil Górski", "Nowy Targ", "Teatr Bagatela")
+    add_client("Elżbieta Lis", "Chrzanów", "Teatr Bagatela")
+    add_client("Grzegorz Zając", "Oświęcim", "Teatr Bagatela")
+    add_client("Joanna Malinowska", "Zakopane", "Teatr Bagatela")
+
+    # Pracownicy Teatr Nowy
+    add_worker("Karolina Michalska", "Swarzędz", "Reżyser", "Teatr Nowy")
+    add_worker("Paweł Wysocki", "Luboń", "Właściciel", "Teatr Nowy")
+    add_worker("Marta Jabłońska", "Mosina", "Technik", "Teatr Nowy")
+    add_worker("Adrian Rutkowski", "Oborniki", "Aktor", "Teatr Nowy")
+    add_worker("Justyna Adamczyk", "Czempiń", "Aktor", "Teatr Nowy")
+
+    # Klienci Teatr Nowy
+    add_client("Dominika Walczak", "Września", "Teatr Nowy")
+    add_client("Sebastian Chmiel", "Śrem", "Teatr Nowy")
+    add_client("Maria Kubicka", "Gniezno", "Teatr Nowy")
+    add_client("Rafał Baran", "Kościan", "Teatr Nowy")
+
+    # Pracownicy Teatr Muzyczny
+    add_worker("Dorota Borkowska", "Reda", "Reżyser", "Teatr Muzyczny")
+    add_worker("Krzysztof Urban", "Rumia", "Właściciel", "Teatr Muzyczny")
+    add_worker("Beata Wróbel", "Puck", "Technik", "Teatr Muzyczny")
+    add_worker("Michał Nowakowski", "Kartuzy", "Aktor", "Teatr Muzyczny")
+    add_worker("Patrycja Grabowska", "Tczew", "Aktor", "Teatr Muzyczny")
+
+    # Klienci Teatr Muzyczny
+    add_client("Zofia Tomaszewska", "Hel", "Teatr Muzyczny")
+    add_client("Andrzej Kowalczyk", "Nowy Dwór Gdański", "Teatr Muzyczny")
+    add_client("Małgorzata Piątek", "Starogard Gdański", "Teatr Muzyczny")
+    add_client("Emil Sawicki", "Malbork", "Teatr Muzyczny")
 
 root.mainloop()
