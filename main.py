@@ -105,25 +105,25 @@ clients_visible = True
 workers_visible = True
 theaters_visible = True
 
-def dodaj_teatr(name, location):
-    nazwa = theater_name_entry.get()
-    adres = theater_address_entry.get()
-    theater = Teatr(name, location, map_widget)
+def add_teatr(name, location):
+    name = theater_name_entry.get()
+    location = theater_address_entry.get()
+    teatry = Teatr(name, location, map_widget)#-#
 
-    if not nazwa or not adres:
-        messagebox.showwarning("Brak danych", "Wprowadź nazwę i adres teatru.")
+    if not name or not location:
+        messagebox.showwarning("Brak danych", "Wprowadź nazwę i location teatru.")
         return
 
-    teatr = Teatr(nazwa, adres)
+    teatr = Teatr(name, location)
     if teatr.coordinates is None:
-        messagebox.showerror("Błąd", f"Nie udało się znaleźć współrzędnych dla adresu: {adres}")
+        messagebox.showerror("Błąd", f"Nie udało się znaleźć współrzędnych dla locationu: {location}")
         return
 
     teatry.append(teatr)
-    listbox_theater.insert(tk.END, f'{nazwa} ({adres})')
+    listbox_theater.insert(tk.END, f'{name} ({location})')
     theater_name_entry.delete(0, tk.END)
     theater_address_entry.delete(0, tk.END)
-    messagebox.showinfo("Sukces", f"Dodano teatr: {nazwa}")
+    messagebox.showinfo("Sukces", f"Dodano teatr: {name}")
 
 
 def add_client(name, location, theater_name):
@@ -304,21 +304,54 @@ def show_associated():
         if worker.theater == teatr and worker.marker:
             worker.marker.set_visible(True)
 
+
+
+
+#+#def load_sample_data():
+#+#    # Dodajemy przykładowe teatry
+#+#    sample_theaters = [
+#+#        ("Teatr Narodowy", "Teatr_Narodowy_w_Warszawie"),
+#+#        ("Teatr Wielki", "Teatr_Wielki_w_Warszawie"),
+#+#        ("Teatr Polski", "Teatr_Polski_w_Warszawie")
+#+#    ]
+#+#    for name, wiki_location in sample_theaters:
+#+#        teatr = Teatr(name, wiki_location)
+#+#        if teatr.coordinates:
+#+#            teatry.append(teatr)
+#+#            listbox_theater.insert(tk.END, f'{name} ({wiki_location})')
+#+#
+#+#    # Dodajemy przykładowych pracowników (z przypisanym teatrem)
+#+#    sample_workers = [
+#+#        ("Jan Kowalski", "Warszawa", "aktor", 0),  # 0 to indeks teatru
+#+#        ("Anna Nowak", "Warszawa", "dyrektor", 1),
+#+#        ("Marek Wiśniewski", "Warszawa", "technik", 2)
+#+#    ]
+#+#    for name, loc, spec, theater_idx in sample_workers:
+#+#        if 0 <= theater_idx < len(teatry):
+#+#            pracownik = Worker(name, loc, teatry[theater_idx], specialization=spec)
+#+#            if pracownik.coordinates:
+#+#                workers.append(pracownik)
+#+#                listbox_pracownikow.insert(tk.END, f'{name} ({loc})')
+#+#
+#+#    # Dodajemy przykładowych klientów
+#+#    sample_clients = [
+#+#        ("Krzysztof K.", "Warszawa", 0),
+#+#        ("Maria Z.", "Warszawa", 1),
+#+#        ("Paweł S.", "Warszawa", 2)
+#+#    ]
+#+#    for name, loc, theater_idx in sample_clients:
+#+#        if 0 <= theater_idx < len(teatry):
+#+#            klient = Client(name, loc, teatry[theater_idx])
+#+#            if klient.coordinates:
+#+#                clients.append(klient)
+#+#                listbox_klientow.insert(tk.END, f'{name} ({loc})')
+
+
 root = tk.Tk()
 root.title("Mapa Teatralna")
 root.geometry("1000x600")
 root.minsize(800, 500)
 
-# Wczytaj i przeskaluj ikony (upewnij się, że pliki są w tym samym katalogu co skrypt)
-try:
-    add_image = Image.open("add_icon.png").resize((24, 24), Image.LANCZOS)
-    remove_image = Image.open("remove_icon.png").resize((24, 24), Image.LANCZOS)
-    add_icon = ImageTk.PhotoImage(add_image)
-    remove_icon = ImageTk.PhotoImage(remove_image)
-except Exception as e:
-    print("Nie znaleziono ikon add_icon.png lub remove_icon.png. Użyję przycisków tekstowych.")
-    add_icon = None
-    remove_icon = None
 
 root.grid_columnconfigure(1, weight=1)
 root.grid_rowconfigure(0, weight=1)
@@ -347,12 +380,12 @@ info_frame.columnconfigure(1, weight=1)
 info_label = ttk.Label(info_frame, text="Szczegóły:", font=("Arial", 12, "bold"))
 info_label.grid(row=0, column=0, columnspan=2, sticky="w")
 
-info_name = ttk.Label(info_frame, text="Nazwa:")
+info_name = ttk.Label(info_frame, text="name:")
 info_name.grid(row=1, column=0, sticky="e")
 info_name_value = ttk.Label(info_frame, text="")
 info_name_value.grid(row=1, column=1, sticky="w")
 
-info_address = ttk.Label(info_frame, text="Adres:")
+info_address = ttk.Label(info_frame, text="location:")
 info_address.grid(row=2, column=0, sticky="e")
 info_address_value = ttk.Label(info_frame, text="")
 info_address_value.grid(row=2, column=1, sticky="w")
@@ -376,10 +409,10 @@ client_theater_label.grid(row=2, column=0, sticky="w")
 client_theater_entry = ttk.Entry(client_frame)
 client_theater_entry.grid(row=2, column=1, sticky="ew")
 
-add_client_btn = ttk.Button(client_frame, image=add_icon, text="Dodaj" if add_icon is None else "", compound="left", command=add_client)
+add_client_btn = ttk.Button(client_frame, text="Dodaj", compound="left", command=add_client)
 add_client_btn.grid(row=3, column=0, pady=5)
 
-remove_client_btn = ttk.Button(client_frame, image=remove_icon, text="Usuń" if remove_icon is None else "", compound="left", command=remove_client)
+remove_client_btn = ttk.Button(client_frame, text="Usuń", compound="left", command=remove_client)
 remove_client_btn.grid(row=3, column=1, pady=5)
 
 listbox_klientow = tk.Listbox(client_frame, height=4)
@@ -404,10 +437,10 @@ staff_theater_label.grid(row=2, column=0, sticky="w")
 staff_theater_entry = ttk.Entry(staff_frame)
 staff_theater_entry.grid(row=2, column=1, sticky="ew")
 
-add_staff_btn = ttk.Button(staff_frame, image=add_icon, text="Dodaj" if add_icon is None else "", compound="left", command=add_worker)
+add_staff_btn = ttk.Button(staff_frame, text="Dodaj", compound="left", command=add_worker)
 add_staff_btn.grid(row=4, column=0, pady=5)
 
-remove_staff_btn = ttk.Button(staff_frame, image=remove_icon, text="Usuń" if remove_icon is None else "", compound="left", command=remove_worker)
+remove_staff_btn = ttk.Button(staff_frame, text="Usuń", compound="left", command=remove_worker)
 remove_staff_btn.grid(row=4, column=1, pady=5)
 
 listbox_pracownikow = tk.Listbox(staff_frame, height=4)
@@ -425,20 +458,20 @@ staff_specialization_entry.grid(row=3, column=1, sticky="ew")
 theater_frame = ttk.LabelFrame(left_frame, text="Teatry", padding=10)
 theater_frame.grid(row=2, column=0, sticky="ew", pady=5)
 
-theater_name_label = ttk.Label(theater_frame, text="Nazwa teatru:")
+theater_name_label = ttk.Label(theater_frame, text="name teatru:")
 theater_name_label.grid(row=0, column=0, sticky="w")
 theater_name_entry = ttk.Entry(theater_frame)
 theater_name_entry.grid(row=0, column=1, sticky="ew")
 
-theater_address_label = ttk.Label(theater_frame, text="Adres teatru (nazwa Wikipedii):")
+theater_address_label = ttk.Label(theater_frame, text="location teatru (name Wikipedii):")
 theater_address_label.grid(row=1, column=0, sticky="w")
 theater_address_entry = ttk.Entry(theater_frame)
 theater_address_entry.grid(row=1, column=1, sticky="ew")
 
-add_theater_btn = ttk.Button(theater_frame, image=add_icon, text="Dodaj" if add_icon is None else "", compound="left", command=dodaj_teatr)
+add_theater_btn = ttk.Button(theater_frame, text="Dodaj", compound="left", command=add_teatr)
 add_theater_btn.grid(row=2, column=0, pady=5)
 
-remove_theater_btn = ttk.Button(theater_frame, image=remove_icon, text="Usuń" if remove_icon is None else "", compound="left", command=remove_teatry)
+remove_theater_btn = ttk.Button(theater_frame, text="Usuń", compound="left", command=remove_teatry)
 remove_theater_btn.grid(row=2, column=1, pady=5)
 
 listbox_theater = tk.Listbox(theater_frame, height=4)
@@ -467,61 +500,62 @@ for frame in (client_frame, staff_frame, theater_frame):
     frame.grid_columnconfigure(1, weight=1)
 
     # Dodawanie teatrów
-    dodaj_teatr("Teatr Narodowy", "Warszawa")
-    dodaj_teatr("Teatr Bagatela", "Kraków")
-    dodaj_teatr("Teatr Nowy", "Poznań")
-    dodaj_teatr("Teatr Muzyczny", "Gdynia")
+    #-#add_teatr("Teatr Narodowy", "Warszawa")
+    #-#add_teatr("Teatr Bagatela", "Kraków")
+    #-#add_teatr("Teatr Nowy", "Poznań")
+    #-#add_teatr("Teatr Muzyczny", "Gdynia")
 
     # Pracownicy Teatr Narodowy
-    add_worker("Jan Kowalski", "Legionowo", "Reżyser", "Teatr Narodowy")
-    add_worker("Anna Nowak", "Piaseczno", "Właściciel", "Teatr Narodowy")
-    add_worker("Marek Zieliński", "Otwock", "Technik", "Teatr Narodowy")
-    add_worker("Ewa Kamińska", "Ząbki", "Aktor", "Teatr Narodowy")
-    add_worker("Piotr Lewandowski", "Marki", "Aktor", "Teatr Narodowy")
+    #-#add_worker("Jan Kowalski", "Legionowo", "Reżyser", "Teatr Narodowy")
+    #-#add_worker("Anna Nowak", "Piaseczno", "Właściciel", "Teatr Narodowy")
+    #-#add_worker("Marek Zieliński", "Otwock", "Technik", "Teatr Narodowy")
+    #-#add_worker("Ewa Kamińska", "Ząbki", "Aktor", "Teatr Narodowy")
+    #-#add_worker("Piotr Lewandowski", "Marki", "Aktor", "Teatr Narodowy")
 
     # Klienci Teatr Narodowy
-    add_client("Katarzyna Wójcik", "Mińsk Mazowiecki", "Teatr Narodowy")
-    add_client("Tomasz Mazur", "Grodzisk Mazowiecki", "Teatr Narodowy")
-    add_client("Agnieszka Kwiatkowska", "Wołomin", "Teatr Narodowy")
-    add_client("Robert Nowicki", "Pruszków", "Teatr Narodowy")
+    #-#add_client("Katarzyna Wójcik", "Mińsk Mazowiecki", "Teatr Narodowy")
+    #-#add_client("Tomasz Mazur", "Grodzisk Mazowiecki", "Teatr Narodowy")
+    #-#add_client("Agnieszka Kwiatkowska", "Wołomin", "Teatr Narodowy")
+    #-#add_client("Robert Nowicki", "Pruszków", "Teatr Narodowy")
 
     # Pracownicy Teatr Bagatela
-    add_worker("Aleksandra Dąbrowska", "Wieliczka", "Reżyser", "Teatr Bagatela")
-    add_worker("Tadeusz Szymański", "Skawina", "Właściciel", "Teatr Bagatela")
-    add_worker("Natalia Król", "Bochnia", "Technik", "Teatr Bagatela")
-    add_worker("Łukasz Pawlak", "Myślenice", "Aktor", "Teatr Bagatela")
-    add_worker("Magdalena Czerwińska", "Niepołomice", "Aktor", "Teatr Bagatela")
+    #-#add_worker("Aleksandra Dąbrowska", "Wieliczka", "Reżyser", "Teatr Bagatela")
+    #-#add_worker("Tadeusz Szymański", "Skawina", "Właściciel", "Teatr Bagatela")
+    #-#add_worker("Natalia Król", "Bochnia", "Technik", "Teatr Bagatela")
+    #-#add_worker("Łukasz Pawlak", "Myślenice", "Aktor", "Teatr Bagatela")
+    #-#add_worker("Magdalena Czerwińska", "Niepołomice", "Aktor", "Teatr Bagatela")
 
     # Klienci Teatr Bagatela
-    add_client("Kamil Górski", "Nowy Targ", "Teatr Bagatela")
-    add_client("Elżbieta Lis", "Chrzanów", "Teatr Bagatela")
-    add_client("Grzegorz Zając", "Oświęcim", "Teatr Bagatela")
-    add_client("Joanna Malinowska", "Zakopane", "Teatr Bagatela")
+    #-#add_client("Kamil Górski", "Nowy Targ", "Teatr Bagatela")
+    #-#add_client("Elżbieta Lis", "Chrzanów", "Teatr Bagatela")
+    #-#add_client("Grzegorz Zając", "Oświęcim", "Teatr Bagatela")
+    #-#add_client("Joanna Malinowska", "Zakopane", "Teatr Bagatela")
 
     # Pracownicy Teatr Nowy
-    add_worker("Karolina Michalska", "Swarzędz", "Reżyser", "Teatr Nowy")
-    add_worker("Paweł Wysocki", "Luboń", "Właściciel", "Teatr Nowy")
-    add_worker("Marta Jabłońska", "Mosina", "Technik", "Teatr Nowy")
-    add_worker("Adrian Rutkowski", "Oborniki", "Aktor", "Teatr Nowy")
-    add_worker("Justyna Adamczyk", "Czempiń", "Aktor", "Teatr Nowy")
+    #-#add_worker("Karolina Michalska", "Swarzędz", "Reżyser", "Teatr Nowy")
+    #-#add_worker("Paweł Wysocki", "Luboń", "Właściciel", "Teatr Nowy")
+    #-#add_worker("Marta Jabłońska", "Mosina", "Technik", "Teatr Nowy")
+    #-#add_worker("Adrian Rutkowski", "Oborniki", "Aktor", "Teatr Nowy")
+    #-#add_worker("Justyna Adamczyk", "Czempiń", "Aktor", "Teatr Nowy")
 
     # Klienci Teatr Nowy
-    add_client("Dominika Walczak", "Września", "Teatr Nowy")
-    add_client("Sebastian Chmiel", "Śrem", "Teatr Nowy")
-    add_client("Maria Kubicka", "Gniezno", "Teatr Nowy")
-    add_client("Rafał Baran", "Kościan", "Teatr Nowy")
+    #-#add_client("Dominika Walczak", "Września", "Teatr Nowy")
+    #-#add_client("Sebastian Chmiel", "Śrem", "Teatr Nowy")
+    #-#add_client("Maria Kubicka", "Gniezno", "Teatr Nowy")
+    #-#add_client("Rafał Baran", "Kościan", "Teatr Nowy")
 
     # Pracownicy Teatr Muzyczny
-    add_worker("Dorota Borkowska", "Reda", "Reżyser", "Teatr Muzyczny")
-    add_worker("Krzysztof Urban", "Rumia", "Właściciel", "Teatr Muzyczny")
-    add_worker("Beata Wróbel", "Puck", "Technik", "Teatr Muzyczny")
-    add_worker("Michał Nowakowski", "Kartuzy", "Aktor", "Teatr Muzyczny")
-    add_worker("Patrycja Grabowska", "Tczew", "Aktor", "Teatr Muzyczny")
+    #-#add_worker("Dorota Borkowska", "Reda", "Reżyser", "Teatr Muzyczny")
+    #-#add_worker("Krzysztof Urban", "Rumia", "Właściciel", "Teatr Muzyczny")
+    #-#add_worker("Beata Wróbel", "Puck", "Technik", "Teatr Muzyczny")
+    #-#add_worker("Michał Nowakowski", "Kartuzy", "Aktor", "Teatr Muzyczny")
+    #-#add_worker("Patrycja Grabowska", "Tczew", "Aktor", "Teatr Muzyczny")
 
     # Klienci Teatr Muzyczny
-    add_client("Zofia Tomaszewska", "Hel", "Teatr Muzyczny")
-    add_client("Andrzej Kowalczyk", "Nowy Dwór Gdański", "Teatr Muzyczny")
-    add_client("Małgorzata Piątek", "Starogard Gdański", "Teatr Muzyczny")
-    add_client("Emil Sawicki", "Malbork", "Teatr Muzyczny")
+    #-#add_client("Zofia Tomaszewska", "Hel", "Teatr Muzyczny")
+    #-#add_client("Andrzej Kowalczyk", "Nowy Dwór Gdański", "Teatr Muzyczny")
+    #-#add_client("Małgorzata Piątek", "Starogard Gdański", "Teatr Muzyczny")
+    #-#add_client("Emil Sawicki", "Malbork", "Teatr Muzyczny")
 
+#-#load_sample_data()
 root.mainloop()
