@@ -1,6 +1,5 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from PIL import Image, ImageTk
 import tkintermapview
 import requests
 from bs4 import BeautifulSoup
@@ -9,8 +8,9 @@ teatry = []
 clients = []
 workers = []
 
+
 class Teatr:
-    def __init__(self, teatry_name, teatry_location, map_widget):
+    def __init__(self, teatry_name, teatry_location):
         self.teatry_name = teatry_name
         self.location = teatry_location
         self.coordinates = self.get_coordinates()
@@ -39,8 +39,9 @@ class Teatr:
             print(f"Błąd przy pobieraniu współrzędnych dla {self.location}: {e}")
             return None
 
+
 class Client:
-    def __init__(self, name, location, theater, map_widget):
+    def __init__(self, name, location, theater):
         self.name = name
         self.location = location
         self.theater = theater
@@ -69,8 +70,9 @@ class Client:
             print(f"Błąd przy pobieraniu współrzędnych dla klienta {self.location}: {e}")
             return None
 
+
 class Worker:
-    def __init__(self, name, location, theater, specialization, map_widget):
+    def __init__(self, name, location, theater, specialization):
         self.name = name
         self.location = location
         self.specialization = specialization
@@ -101,32 +103,33 @@ class Worker:
             print(f"Błąd przy pobieraniu współrzędnych dla pracownika {self.location}: {e}")
             return None
 
+
 clients_visible = True
 workers_visible = True
 theaters_visible = True
 
-def add_teatr(name, location):
+
+def add_teatr():
     name = theater_name_entry.get()
     location = theater_address_entry.get()
-    teatry = Teatr(name, location, map_widget)#-#
+    teatr = Teatr(name, location)
+    teatry.append(teatr)
 
     if not name or not location:
-        messagebox.showwarning("Brak danych", "Wprowadź nazwę i location teatru.")
+        messagebox.showwarning("Brak danych", "Wprowadź nazwę i lokalizację teatru.")
         return
 
-    teatr = Teatr(name, location)
     if teatr.coordinates is None:
-        messagebox.showerror("Błąd", f"Nie udało się znaleźć współrzędnych dla locationu: {location}")
+        messagebox.showerror("Błąd", f"Nie udało się znaleźć współrzędnych dla lokalizacji: {location}")
         return
 
-    teatry.append(teatr)
     listbox_theater.insert(tk.END, f'{name} ({location})')
     theater_name_entry.delete(0, tk.END)
     theater_address_entry.delete(0, tk.END)
     messagebox.showinfo("Sukces", f"Dodano teatr: {name}")
 
 
-def add_client(name, location, theater_name):
+def add_client():
     name = client_name_entry.get()
     location = client_location_entry.get()
     try:
@@ -140,7 +143,8 @@ def add_client(name, location, theater_name):
         return
 
     if 0 <= index < len(teatry):
-        klient = Client(name, location, map_widget)
+        teatr = teatry[index]  # POBIERAMY OBIEKT TEATRU
+        klient = Client(name, location, teatr)  # PRZEKAZUJEMY DO KONSTRUKTORA
         if klient.coordinates is None:
             messagebox.showerror("Błąd", f"Nie udało się pobrać współrzędnych dla klienta {location}.")
             return
@@ -152,10 +156,12 @@ def add_client(name, location, theater_name):
     else:
         messagebox.showwarning("Błąd", "Podaj prawidłowy numer teatru.")
 
-def add_worker(name, location, specialization, theater_name):
+
+def add_worker():
     name = staff_name_entry.get()
     location = staff_location_entry.get()
     specialization = staff_specialization_entry.get()
+
     if not specialization:
         messagebox.showwarning("Brak danych", "Wybierz specjalizację pracownika.")
         return
@@ -170,7 +176,8 @@ def add_worker(name, location, specialization, theater_name):
         return
 
     if 0 <= index < len(teatry):
-        pracownik = Worker(name, location, teatry, specialization, map_widget)
+        teatr = teatry[index]
+        pracownik = Worker(name, location, teatr, specialization)
         if pracownik.coordinates is None:
             messagebox.showerror("Błąd", f"Nie udało się pobrać współrzędnych dla pracownika {location}.")
             return
@@ -182,6 +189,7 @@ def add_worker(name, location, specialization, theater_name):
     else:
         messagebox.showwarning("Błąd", "Podaj prawidłowy numer teatru.")
 
+
 def remove_client():
     selection = listbox_klientow.curselection()
     if selection:
@@ -191,6 +199,7 @@ def remove_client():
         clients.pop(index)
         listbox_klientow.delete(index)
 
+
 def remove_worker():
     selection = listbox_pracownikow.curselection()
     if selection:
@@ -199,6 +208,7 @@ def remove_worker():
             workers[index].marker.delete()
         workers.pop(index)
         listbox_pracownikow.delete(index)
+
 
 def remove_teatry():
     selection = listbox_theater.curselection()
@@ -239,119 +249,69 @@ def remove_teatry():
         teatry.pop(index)
         listbox_theater.delete(index)
 
-#Widoczność znaczników
+
 def toggle_clients():
     global clients_visible
     clients_visible = not clients_visible
     for client in clients:
-        if client.marker:
-            if clients_visible:
-                client.marker.set_visible(True)
-            else:
-                client.marker.set_visible(False)
+        if clients_visible:
+            if client.marker is None and client.coordinates:
+                client.marker = map_widget.set_marker(*client.coordinates, text=f'Klient: {client.name}')
+        else:
+            if client.marker:
+                client.marker.delete()
+                client.marker = None
+
 
 def toggle_workers():
     global workers_visible
     workers_visible = not workers_visible
     for worker in workers:
-        if worker.marker:
-            if workers_visible:
-                worker.marker.set_visible(True)
-            else:
-                worker.marker.set_visible(False)
+        if workers_visible:
+            if worker.marker is None and worker.coordinates:
+                text = f'Pracownik: {worker.name}\nSpecjalizacja: {worker.specialization}'
+                worker.marker = map_widget.set_marker(*worker.coordinates, text=text)
+        else:
+            if worker.marker:
+                worker.marker.delete()
+                worker.marker = None
+
 
 def toggle_theaters():
     global theaters_visible
     theaters_visible = not theaters_visible
     for teatr in teatry:
-        if teatr.marker:
-            if theaters_visible:
-                teatr.marker.set_visible(True)
-            else:
-                teatr.marker.set_visible(False)
+        if theaters_visible:
+            if teatr.marker is None and teatr.coordinates:
+                teatr.marker = map_widget.set_marker(*teatr.coordinates, text=f'Teatry: {teatr.teatry_name}')
+        else:
+            if teatr.marker:
+                teatr.marker.delete()
+                teatr.marker = None
 
-#Pokazanie powiązanych
 
 def show_associated():
     selection = listbox_theater.curselection()
     if not selection:
-        messagebox.showinfo("Info", "Zaznacz teatr z listy.")
+        messagebox.showinfo("Brak wyboru", "Wybierz teatr z listy.")
         return
-
     index = selection[0]
     teatr = teatry[index]
 
-    # Ukryj wszystkich
     for client in clients:
-        if client.marker:
-            client.marker.set_visible(False)
+        if client.theater == teatr and client.marker is None and client.coordinates:
+            client.marker = map_widget.set_marker(*client.coordinates, text=f'Klient: {client.name}')
+
     for worker in workers:
-        if worker.marker:
-            worker.marker.set_visible(False)
-    for t in teatry:
-        if t.marker:
-            t.marker.set_visible(False)
-
-    # Pokaż wybrany teatr
-    if teatr.marker:
-        teatr.marker.set_visible(True)
-
-    # Pokaż powiązanych klientów i pracowników
-    for client in clients:
-        if client.theater == teatr and client.marker:
-            client.marker.set_visible(True)
-    for worker in workers:
-        if worker.theater == teatr and worker.marker:
-            worker.marker.set_visible(True)
-
-
-
-
-#+#def load_sample_data():
-#+#    # Dodajemy przykładowe teatry
-#+#    sample_theaters = [
-#+#        ("Teatr Narodowy", "Teatr_Narodowy_w_Warszawie"),
-#+#        ("Teatr Wielki", "Teatr_Wielki_w_Warszawie"),
-#+#        ("Teatr Polski", "Teatr_Polski_w_Warszawie")
-#+#    ]
-#+#    for name, wiki_location in sample_theaters:
-#+#        teatr = Teatr(name, wiki_location)
-#+#        if teatr.coordinates:
-#+#            teatry.append(teatr)
-#+#            listbox_theater.insert(tk.END, f'{name} ({wiki_location})')
-#+#
-#+#    # Dodajemy przykładowych pracowników (z przypisanym teatrem)
-#+#    sample_workers = [
-#+#        ("Jan Kowalski", "Warszawa", "aktor", 0),  # 0 to indeks teatru
-#+#        ("Anna Nowak", "Warszawa", "dyrektor", 1),
-#+#        ("Marek Wiśniewski", "Warszawa", "technik", 2)
-#+#    ]
-#+#    for name, loc, spec, theater_idx in sample_workers:
-#+#        if 0 <= theater_idx < len(teatry):
-#+#            pracownik = Worker(name, loc, teatry[theater_idx], specialization=spec)
-#+#            if pracownik.coordinates:
-#+#                workers.append(pracownik)
-#+#                listbox_pracownikow.insert(tk.END, f'{name} ({loc})')
-#+#
-#+#    # Dodajemy przykładowych klientów
-#+#    sample_clients = [
-#+#        ("Krzysztof K.", "Warszawa", 0),
-#+#        ("Maria Z.", "Warszawa", 1),
-#+#        ("Paweł S.", "Warszawa", 2)
-#+#    ]
-#+#    for name, loc, theater_idx in sample_clients:
-#+#        if 0 <= theater_idx < len(teatry):
-#+#            klient = Client(name, loc, teatry[theater_idx])
-#+#            if klient.coordinates:
-#+#                clients.append(klient)
-#+#                listbox_klientow.insert(tk.END, f'{name} ({loc})')
+        if worker.theater == teatr and worker.marker is None and worker.coordinates:
+            worker.marker = map_widget.set_marker(*worker.coordinates,
+                                                  text=f'Pracownik: {worker.name}\nSpecjalizacja: {worker.specialization}')
 
 
 root = tk.Tk()
 root.title("Mapa Teatralna")
 root.geometry("1000x600")
 root.minsize(800, 500)
-
 
 root.grid_columnconfigure(1, weight=1)
 root.grid_rowconfigure(0, weight=1)
@@ -477,8 +437,7 @@ remove_theater_btn.grid(row=2, column=1, pady=5)
 listbox_theater = tk.Listbox(theater_frame, height=4)
 listbox_theater.grid(row=4, column=0, columnspan=2, sticky="ew", pady=5)
 
-
-#Przyciski do pokazywania i chowania
+# Przyciski do pokazywania i chowania
 
 toggle_frame = ttk.Frame(theater_frame)
 toggle_frame.grid(row=5, column=0, columnspan=2, pady=10)
@@ -499,63 +458,4 @@ btn_show_associated.grid(row=0, column=3, padx=5)
 for frame in (client_frame, staff_frame, theater_frame):
     frame.grid_columnconfigure(1, weight=1)
 
-    # Dodawanie teatrów
-    #-#add_teatr("Teatr Narodowy", "Warszawa")
-    #-#add_teatr("Teatr Bagatela", "Kraków")
-    #-#add_teatr("Teatr Nowy", "Poznań")
-    #-#add_teatr("Teatr Muzyczny", "Gdynia")
-
-    # Pracownicy Teatr Narodowy
-    #-#add_worker("Jan Kowalski", "Legionowo", "Reżyser", "Teatr Narodowy")
-    #-#add_worker("Anna Nowak", "Piaseczno", "Właściciel", "Teatr Narodowy")
-    #-#add_worker("Marek Zieliński", "Otwock", "Technik", "Teatr Narodowy")
-    #-#add_worker("Ewa Kamińska", "Ząbki", "Aktor", "Teatr Narodowy")
-    #-#add_worker("Piotr Lewandowski", "Marki", "Aktor", "Teatr Narodowy")
-
-    # Klienci Teatr Narodowy
-    #-#add_client("Katarzyna Wójcik", "Mińsk Mazowiecki", "Teatr Narodowy")
-    #-#add_client("Tomasz Mazur", "Grodzisk Mazowiecki", "Teatr Narodowy")
-    #-#add_client("Agnieszka Kwiatkowska", "Wołomin", "Teatr Narodowy")
-    #-#add_client("Robert Nowicki", "Pruszków", "Teatr Narodowy")
-
-    # Pracownicy Teatr Bagatela
-    #-#add_worker("Aleksandra Dąbrowska", "Wieliczka", "Reżyser", "Teatr Bagatela")
-    #-#add_worker("Tadeusz Szymański", "Skawina", "Właściciel", "Teatr Bagatela")
-    #-#add_worker("Natalia Król", "Bochnia", "Technik", "Teatr Bagatela")
-    #-#add_worker("Łukasz Pawlak", "Myślenice", "Aktor", "Teatr Bagatela")
-    #-#add_worker("Magdalena Czerwińska", "Niepołomice", "Aktor", "Teatr Bagatela")
-
-    # Klienci Teatr Bagatela
-    #-#add_client("Kamil Górski", "Nowy Targ", "Teatr Bagatela")
-    #-#add_client("Elżbieta Lis", "Chrzanów", "Teatr Bagatela")
-    #-#add_client("Grzegorz Zając", "Oświęcim", "Teatr Bagatela")
-    #-#add_client("Joanna Malinowska", "Zakopane", "Teatr Bagatela")
-
-    # Pracownicy Teatr Nowy
-    #-#add_worker("Karolina Michalska", "Swarzędz", "Reżyser", "Teatr Nowy")
-    #-#add_worker("Paweł Wysocki", "Luboń", "Właściciel", "Teatr Nowy")
-    #-#add_worker("Marta Jabłońska", "Mosina", "Technik", "Teatr Nowy")
-    #-#add_worker("Adrian Rutkowski", "Oborniki", "Aktor", "Teatr Nowy")
-    #-#add_worker("Justyna Adamczyk", "Czempiń", "Aktor", "Teatr Nowy")
-
-    # Klienci Teatr Nowy
-    #-#add_client("Dominika Walczak", "Września", "Teatr Nowy")
-    #-#add_client("Sebastian Chmiel", "Śrem", "Teatr Nowy")
-    #-#add_client("Maria Kubicka", "Gniezno", "Teatr Nowy")
-    #-#add_client("Rafał Baran", "Kościan", "Teatr Nowy")
-
-    # Pracownicy Teatr Muzyczny
-    #-#add_worker("Dorota Borkowska", "Reda", "Reżyser", "Teatr Muzyczny")
-    #-#add_worker("Krzysztof Urban", "Rumia", "Właściciel", "Teatr Muzyczny")
-    #-#add_worker("Beata Wróbel", "Puck", "Technik", "Teatr Muzyczny")
-    #-#add_worker("Michał Nowakowski", "Kartuzy", "Aktor", "Teatr Muzyczny")
-    #-#add_worker("Patrycja Grabowska", "Tczew", "Aktor", "Teatr Muzyczny")
-
-    # Klienci Teatr Muzyczny
-    #-#add_client("Zofia Tomaszewska", "Hel", "Teatr Muzyczny")
-    #-#add_client("Andrzej Kowalczyk", "Nowy Dwór Gdański", "Teatr Muzyczny")
-    #-#add_client("Małgorzata Piątek", "Starogard Gdański", "Teatr Muzyczny")
-    #-#add_client("Emil Sawicki", "Malbork", "Teatr Muzyczny")
-
-#-#load_sample_data()
 root.mainloop()
